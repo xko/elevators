@@ -1,7 +1,6 @@
 package xko.elevators
 
 import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 
 class Spec extends AnyFlatSpec with Matchers {
