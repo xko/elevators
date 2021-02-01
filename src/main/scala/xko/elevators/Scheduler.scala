@@ -14,7 +14,7 @@ case class Scheduler(lifts: IndexedSeq[Lift[_]], pickups: Set[PickUp], now: Long
   override def isIdle: Boolean = lifts.forall(_.plan.isEmpty) && pickups.isEmpty && lifts.forall(_.isStopped)
 
   def proceed: Scheduler = Scheduler( lifts.map(_.planPickups(pickups, lifts).proceed.stopOnReq(pickups)),
-                                      pickups.filter(p => lifts.exists(_.willPickNow(p))),
+                                      pickups.filterNot(p => lifts.exists(_.willPickNow(p))),
                                       now + 1 )
 
 }

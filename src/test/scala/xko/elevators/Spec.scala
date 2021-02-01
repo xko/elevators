@@ -14,7 +14,7 @@ class Spec extends AnyFlatSpec with Matchers {
 
   it should "collect way up" in {
     val before = ControlSystem(0).pickUp(1, 1).pickUp(2, 1).pickUp(4, 1)
-    val after = before.proceed(5)
+    val after = before.proceed(10)
     after.elevators(0).floor should be(4)
   }
 }
