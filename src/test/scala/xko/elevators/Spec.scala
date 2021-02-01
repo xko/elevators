@@ -25,4 +25,17 @@ class Spec extends AnyFlatSpec with Matchers {
     steps(10).elevators(0).floor should be(4)
     steps(11).isIdle should be (true)
   }
+
+  it should "keep direction" in {
+    val start = ControlSystem(2).pickUp(4,Down) // will wait till requests up are served
+                                .pickUp(5,Up)   // served 1st
+    val step4 = start.proceed(4)
+    step4.elevators(0).floor should be(5)
+    val step9 = step4.dropOff(0, 7)             // served 2nd
+                     .proceed(5)
+    step9.elevators(0).floor should be(7)
+    val step15 = step9.proceed(6)
+    step15.elevators(0).floor should be(4)
+    step15.proceed.isIdle should be (true)
+  }
 }
