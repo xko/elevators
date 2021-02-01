@@ -13,7 +13,7 @@ class Spec extends AnyFlatSpec with Matchers {
   }
 
   it should "collect way up" in {
-    val start = ControlSystem(0).pickUp(1, 1).pickUp(2, 1).pickUp(4, 1)
+    val start = ControlSystem(0).pickUp(1, Up).pickUp(2, Up).pickUp(4, Up)
     val steps = Iterator.iterate(start)(_.proceed).take(12).toIndexedSeq
     steps(1).elevators(0).floor should be(1)
     steps(1).elevators(0).isStopped should be(true)

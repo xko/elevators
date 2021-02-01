@@ -9,6 +9,9 @@ package object elevators {
     def isStopped: Boolean
   }
 
+  val Up: Int = 1
+  val Down: Int = -1
+
   trait ControlSystem[+E<:Elevator] {
     def elevators: IndexedSeq[E]
     def pickUp(floor: Int, dir: Int): ControlSystem[E]
