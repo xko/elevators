@@ -3,70 +3,84 @@ package xko.elevators
 import scala.collection.immutable.SortedSet
 import math.abs
 
-trait Lift[State <: Lift[State]] extends Elevator { state: State =>
-  def isStopped: Boolean
-  def floor: Int
-  def dropoffs: SortedSet[Int]
-  lazy val dir: Int = dropoffs.ordering.max(1, -1)
-  def pickups: Set[Int]
+trait Lift extends Elevator {
+  def requestDrop(floor: Int): Lift
+  def requestPicks(pickups: Iterable[PickUp]): Lift
+  def willPickNow(pup: PickUp): Boolean
+  def eta(pup: PickUp): Long
 
-  def dropOff(floor: Int): Lift[State] = if(isStopped && floor == this.floor) this else updated(dropOffs = dropoffs + floor)
+  def proceed: Lift
+  def mayStop(pups: Iterable[PickUp]): Lift
 
-  def canPickNow(pup: PickUp): Boolean = pup.floor == floor && pup.dir == dir
-  def willPickNow(pup: PickUp):Boolean = canPickNow(pup) && isStopped
-
-  def updated(floor:Int = floor, dropOffs: SortedSet[Int] = dropoffs, pickups: Set[Int] = pickups): State
-
-  lazy val plan: SortedSet[Int] = dropoffs ++ pickups
-  lazy val planAhead: SortedSet[Int] = plan.rangeFrom(floor+1)
-  lazy val farthestAhead: Int = planAhead.lastOption.getOrElse(floor)
-
-  def eta(pup: PickUp): Long =
-    if (pup.dir == dir && pup.floor.between(floor, farthestAhead))
-      planAhead.rangeUntil(pup.floor).size * MinStopDuration + abs(pup.floor - floor)
-    else
-      planAhead.size * MinStopDuration + abs(farthestAhead - floor) + abs(farthestAhead - pup.floor)
-
-  def planPickups(allPups: Iterable[PickUp], allLifts: Iterable[Lift[_]]): Lift[State] = updated(
-    pickups = allPups.filter( p => allLifts.minBy(_.eta(p)) eq this )
-                     .filterNot(willPickNow).map(_.floor).toSet
-  )
-
-  def forward: Lift[_] = Moving(floor + dir, dropoffs, pickups)
-
-  def turn: Lift[_] = Moving(floor - dir, reverse(dropoffs), pickups)
-
-  def stopOnReq(pups: Iterable[PickUp]): Lift[_]
-
-
-  def proceed: Lift[_]
 }
 
-case class Stopped(floor: Int, dropoffs: SortedSet[Int], pickups: Set[Int], canGoIn: Long) extends Lift[Stopped] {
+case class Idle(floor: Int) extends Lift {
+  override def dir: Int = 0
+  override def isStopped: Boolean = true
+
+  override def requestDrop(floor: Int): Lift = Stopped(floor, this.floor.towards(floor) + floor, Set.empty, 0)
+
+  override def requestPicks(pickups: Iterable[PickUp]): Lift =
+    if (pickups.isEmpty) this
+    else Stopped(floor, this.floor.towards(pickups.maxBy(eta).floor), pickups.toSet, 0)
+
+  override def willPickNow(pup: PickUp): Boolean = pup.floor == this.floor
+  override def eta(pup: PickUp): Long = abs(pup.floor - floor)
+
+  override def proceed: Lift = this
+  override def mayStop(pups: Iterable[PickUp]): Lift = this
+}
+
+
+trait Active extends Lift {
+  def dropoffs: SortedSet[Int]
+  override val dir: Int = dropoffs.ordering.max(1, -1)
+  def pickups: Set[PickUp]
+
+  def canPickNow(pup: PickUp): Boolean = pup.floor == floor && (pup.dir == dir || planAhead.isEmpty)
+
+  lazy val planAhead: SortedSet[Int] = (dropoffs ++ pickups.map(_.floor)).rangeFrom(floor+1)
+  lazy val farthestAhead: Int = planAhead.lastOption.getOrElse(floor)
+  lazy val stopsAhead: SortedSet[Int] = (dropoffs ++ pickups.filter(_.dir == dir).map(_.floor)).rangeFrom(floor+1)
+
+  lazy val planBehind: SortedSet[Int] = (dropoffs ++ pickups.map(_.floor)).rangeUntil(floor)
+
+  override def eta(pup: PickUp): Long =
+    if (pup.dir == dir && pup.floor.between(floor, farthestAhead))
+      stopsAhead.rangeUntil(pup.floor).size * StopDuration + abs(pup.floor - floor)
+    else
+      stopsAhead.size * StopDuration + abs(farthestAhead - floor) + abs(farthestAhead - pup.floor)
+
+  override def proceed: Lift =  if (planAhead.nonEmpty) Moving(floor + dir, dropoffs, pickups)
+                                else if (planBehind.nonEmpty) Moving(floor - dir, reverse(dropoffs), pickups)
+                                else Idle(floor)
+}
+
+case class Stopped(floor: Int, dropoffs: SortedSet[Int], pickups: Set[PickUp], canGoIn: Long) extends Active {
   val isStopped: Boolean = true
 
-  override def updated(floor: Int, dropoffs: SortedSet[Int], pickups: Set[Int]): Stopped =
-    copy(floor = floor, dropoffs = dropoffs, pickups = pickups)
+  override def requestDrop(floor: Int): Stopped = if(floor == this.floor) this else copy(dropoffs = dropoffs + floor)
 
+  override def requestPicks(pickups: Iterable[PickUp]): Lift = copy(pickups= pickups.filterNot(canPickNow).toSet)
 
-  override def stopOnReq(pups: Iterable[PickUp]): Lift[_] = this
+  override def willPickNow(pup: PickUp): Boolean = canPickNow(pup)
+  override def eta(pup: PickUp): Long = super.eta(pup) + canGoIn
 
-  override def proceed: Lift[_] = if (canGoIn > 0) copy(canGoIn = canGoIn - 1)
-                                  else if (plan.rangeFrom(floor + 1).nonEmpty) forward
-                                  else if (plan.rangeUntil(floor).nonEmpty) turn
-                                  else this
+  override def proceed: Lift = if (canGoIn > 0) copy(canGoIn = canGoIn - 1) else super.proceed
+  override def mayStop(pups: Iterable[PickUp]): Stopped = this
 }
 
-case class Moving(floor: Int, dropoffs: SortedSet[Int], pickups: Set[Int]) extends Lift[Moving] {
+case class Moving(floor: Int, dropoffs: SortedSet[Int], pickups: Set[PickUp]) extends Active {
   val isStopped: Boolean = false
 
-  override def updated(floor: Int, dropoffs: SortedSet[Int], pickups: Set[Int]): Moving =
-    copy(floor = floor, dropoffs = dropoffs, pickups = pickups)
+  override def requestDrop(floor: Int): Moving = copy(dropoffs = dropoffs + floor)
 
-  def stopOnReq(pups: Iterable[PickUp]): Lift[_] =
-    if (pups.exists(canPickNow)) Stopped(floor, dropoffs, pickups, MinStopDuration)
-    else if (dropoffs.contains(floor)) Stopped(floor, dropoffs - floor, pickups, MinStopDuration)
+  override def requestPicks(pickups: Iterable[PickUp]): Moving = copy(pickups = pickups.toSet)
+
+  override def willPickNow(pup: PickUp): Boolean = false
+
+  override def mayStop(pups: Iterable[PickUp]): Active =
+    if (pups.exists(canPickNow)) Stopped(floor, dropoffs - floor, pickups, StopDuration)
+    else if (dropoffs.contains(floor)) Stopped(floor, dropoffs - floor, pickups, StopDuration)
     else this
-
-  override def proceed: Lift[_] = forward
 }

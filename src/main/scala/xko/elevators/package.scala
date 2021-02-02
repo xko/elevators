@@ -11,6 +11,7 @@ package object elevators {
 
   val Up: Int = 1
   val Down: Int = -1
+  val Free: Int = 0
 
   trait ControlSystem[+E<:Elevator] {
     def elevators: IndexedSeq[E]
@@ -27,14 +28,15 @@ package object elevators {
     def apply(floors: Int*): ControlSystem[Elevator] = Scheduler(floors.toIndexedSeq.map(lift),Set.empty,0)
   }
 
-  private[elevators] def lift(floor:Int) = Stopped(floor, SortedSet.empty, Set.empty, 0)
+  private[elevators] def lift(floor:Int) = Idle(floor)
 
-  private[elevators] val MinStopDuration: Long = 3
+  private[elevators] val StopDuration: Int = 3
 
   private[elevators] def reverse[T](s: SortedSet[T]) = s.map(identity)(s.ordering.reverse)
 
   private[elevators] implicit class IntUtil(v: Int) {
     def between(a: Int, b: Int): Boolean =  math.min(a, b) to math.max(a, b) contains v
+    def towards(t: Int): SortedSet[Int] = if(t >= v) SortedSet.empty else reverse(SortedSet.empty)
   }
 
 
