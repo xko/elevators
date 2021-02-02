@@ -61,4 +61,25 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
     start.proceed(4).elevators(1) should (beAt(4) and be(stopped))
     start.proceed(8) shouldBe idle
   }
+
+
+  implicit class RideHelper(cs:ControlSystem[Elevator]) {
+    def ride(from: Int, to: Int): ControlSystem[Elevator] = {
+      val i = cs.elevators.indexWhere(e => e.floor == from && e.isStopped && e.dir * (to - from) >= 0)
+      if (i >= 0) cs.dropOff(i, to) else cs
+    }
+  }
+
+  it should "prefer local pickups" in {
+    val start = ControlSystem(100,0).pickUp(125,Down).pickUp(126, Up).pickUp(81,Down)
+                                    .pickUp(-2,Down).pickUp(12,Up).pickUp(8,Up)
+    val steps = Iterator.iterate(start) { cs =>
+      cs.ride(126, 130).ride(125, 80).ride(81, 75).ride(12, 10).ride(8, 20).ride(-2, -3).proceed
+    }.take(200).toIndexedSeq
+    val upperStops = steps.filter(_.elevators(0).isStopped).map(_.elevators(0).floor)
+    val lowerStops = steps.filter(_.elevators(1).isStopped).map(_.elevators(1).floor)
+
+    upperStops should contain inOrder (100,126,130,125,81,80,75)
+    lowerStops should contain inOrder (0,8,12,20,-2,-3)
+  }
 }
