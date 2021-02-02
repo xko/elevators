@@ -76,10 +76,11 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
     val steps = Iterator.iterate(start) { cs =>
       cs.ride(126, 130).ride(125, 80).ride(81, 75).ride(12, 10).ride(8, 20).ride(-2, -3).proceed
     }.take(200).toIndexedSeq
-    val upperStops = steps.filter(_.elevators(0).isStopped).map(_.elevators(0).floor)
-    val lowerStops = steps.filter(_.elevators(1).isStopped).map(_.elevators(1).floor)
+    steps.last shouldBe idle
 
-    upperStops should contain inOrder (100,126,130,125,81,80,75)
-    lowerStops should contain inOrder (0,8,12,20,-2,-3)
+    val upperStops = steps.filter(_.elevators(0).isStopped).map(_.elevators(0).floor).distinct
+    val lowerStops = steps.filter(_.elevators(1).isStopped).map(_.elevators(1).floor).distinct
+    upperStops should equal (IndexedSeq(100,126,130,125,81,80,75))
+    lowerStops should equal (IndexedSeq(0,8,12,20,-2,-3))
   }
 }
