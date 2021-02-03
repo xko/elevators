@@ -21,7 +21,7 @@ Algorithm can be roughly described like this:
 * Requests to particular elevator are: 
     * it's drop-off requests
     * pick-up requests, for which this elevator is the closest
-        * "closest" means minimum [ETA](src/main/scala/xko/elevators/Lift.scala#:~:text={def eta}) to particular floor
+        * "closest" means minimum [ETA](src/main/scala/xko/elevators/Lift.scala#L67) to particular floor
         * this can change on every step, so these get reassigned on every step
 * Elevator stops at the floor if it has drop-off requests there, or there are pick-up requests from this floor in its current 
   direction
