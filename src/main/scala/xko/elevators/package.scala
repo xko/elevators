@@ -20,7 +20,9 @@ package object elevators {
   /** State of an elevator control system at particular step */
   trait ControlSystem {
     def elevators: IndexedSeq[Elevator]
-    /** Request a pick-up.
+    /** Request a pick-up
+     * @param floor where passenger is waiting
+     * @param dir the direction in which passenger plans to go: 1 for UP, -1 for DOWN
      * @return new instance of ControlSystem with pick-up scheduled
      */
     def pickUp(floor: Int, dir: Int): ControlSystem
