@@ -60,13 +60,13 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
   }
 
   implicit class PassengerBehavior(cs:ControlSystem) {
-    def ride(from: Int, to: Int): ControlSystem = { // board and request drop-off
+    def ride(from: Int, to: Int): ControlSystem = { // if it arrived, board and request drop-off
       val i = cs.elevators.indexWhere (e => e.floor == from && e.isStopped && e.dir * (to - from) >= 0)
       if (i >= 0) cs.dropOff(i, to) else cs
     }
 
-    def hijack(from: Int, to: Int): ControlSystem = {              // same, but ignore direction:
-      val i = cs.elevators.indexWhere(e => e.floor == from && e.isStopped)   // request up in the downward lift too
+    def hijack(from: Int, to: Int): ControlSystem = { // same, but ignore direction
+      val i = cs.elevators.indexWhere(e => e.floor == from && e.isStopped)
       if (i >= 0) cs.dropOff(i, to) else cs
     }
   }
