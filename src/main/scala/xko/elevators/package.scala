@@ -21,7 +21,7 @@ package object elevators {
     def proceed: ControlSystem
 
     def iterate(f: ControlSystem => ControlSystem):Iterator[ControlSystem] = Iterator.iterate(this)(f)
-    def proceed(steps: Int): ControlSystem= iterate(_.proceed).drop(steps).next
+    def proceed(steps: Int): ControlSystem= iterate(_.proceed).drop(steps).next()
   }
 
   object ControlSystem {
