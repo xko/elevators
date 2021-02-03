@@ -20,8 +20,8 @@ package object elevators {
     def isIdle: Boolean
     def proceed: ControlSystem
 
-    def proceed(steps: Int): ControlSystem= Iterator.iterate(this)(_.proceed).drop(steps).next()
-    def proceedTillIdle: ControlSystem = Iterator.iterate(this)(_.proceed).dropWhile(!_.isIdle).next()
+    def iterate: (ControlSystem => ControlSystem) => Iterator[ControlSystem] = Iterator.iterate(this)
+    def proceed(steps: Int): ControlSystem= iterate(_.proceed).drop(steps).next
   }
 
   object ControlSystem {

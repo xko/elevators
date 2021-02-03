@@ -74,7 +74,7 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
   it should "prefer local pickups" in {
     val start = ControlSystem(100,0).pickUp(125,Down).pickUp(126, Up).pickUp(81,Down)
                                     .pickUp(-2,Down).pickUp(12,Up).pickUp(8,Up)
-    val steps = Iterator.iterate(start) { cs =>
+    val steps = start.iterate { cs =>
       cs.ride(126, 130).ride(125, 80).ride(81, 75)
         .ride(12, 10).ride(8, 20).ride(-2, -3)
         .proceed
@@ -89,7 +89,7 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
 
   it should "serve hijacks too, but later" in {
     val start = ControlSystem(100,0).pickUp(125,Down).pickUp(126, Up).pickUp(81,Down)
-    val steps = Iterator.iterate(start) { cs =>
+    val steps = start.iterate { cs =>
       cs.ride(126, 130).hijack(126,122)
         .ride(125, 80).ride(81, 75).ride(12, 10).ride(8, 20).ride(-2, -3)
         .proceed
