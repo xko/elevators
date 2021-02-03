@@ -2,11 +2,6 @@ Elevator Simulation challenge
 -------------------
 Simulation of an elevator control system for a [job interview coding challenge](Challenge.pdf). 
 
-### Running and building
-
-The project is [sbt](https://www.scala-sbt.org)-based. All sbt commands are available via included [starter
-script](bin/sbt). E.g. `./bin/sbt test` 
-
 ### Algorithm
 
 The algorithm aims to optimise an average time needed to fulfil a request, where request is a call button,
@@ -29,5 +24,17 @@ Algorithm can be roughly described like this:
 
 ### Implementation
 
-TBD
-    
+The public API is in [package object](/src/main/scala/xko/elevators/package.scala) of `xko.elevators` 
+it follows the [challenge](Challenge.pdf) proposal, except the elevator status is a separate `Elevator` class. 
+Implementation of the `Elevator` is `Lift` trait and its implementations for different states - all placed in 
+the same [file](/src/main/scala/xko/elevators/Lift.scala). The `ControlSystem` is implemented by `Scheduler`
+
+Other difference from proposed API, is immutable "functional" style. I.e. the request methods - `pickUp` and 
+`dropOff` - as well as `proceed` (which advanced to the next step), all return 
+a new copy of an object and no mutable state is stored anywhere. 
+
+### Running and building
+
+The project is [sbt](https://www.scala-sbt.org)-based. All sbt commands are available via included [starter
+script](bin/sbt). E.g. `./bin/sbt test` 
+
