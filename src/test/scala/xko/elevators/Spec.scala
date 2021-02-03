@@ -7,35 +7,43 @@ import org.scalatest.matchers.should.Matchers
 
 class Spec extends AnyFlatSpec with Matchers with Inside{
 
-  object stopped extends BeMatcher[Elevator] {
-    override def apply(left: Elevator): MatchResult = MatchResult(left.isStopped,"was moving", "was stopped")
-  }
-  val moving: BeMatcher[Elevator] = not(stopped)
+  val stopped = BeMatcher[Elevator](e => MatchResult(e.isStopped,"was moving", "was stopped"))
+  val moving = not(stopped)
 
-  def beAt(floor: Int): Matcher[Elevator] =Matcher[Elevator] { e =>
-    MatchResult(e.floor == floor, s"was at ${e.floor}", s"was at $floor")
-  }
+  def beAt(floor: Int) =
+    Matcher[Elevator](e => MatchResult(e.floor == floor, s"was at ${e.floor}", s"was at ${e.floor}"))
 
-  val idle: BePropertyMatcher[ControlSystem[_]] =
-    BePropertyMatcher[ControlSystem[_]] (cs => BePropertyMatchResult(cs.isIdle, "idle"))
+  val idle = BePropertyMatcher[ControlSystem[_]] (cs => BePropertyMatchResult(cs.isIdle, "idle"))
 
 
   it should "simply pickup" in {
     val before = ControlSystem(3,3,3)
     val after = before.pickUp(4,1).proceed
-    after.elevators(0).floor should be(4)
-    after.elevators(0).isStopped should be(true)
+    after.elevators(0) should (beAt(4) and be(stopped))
   }
 
   it should "collect way up" in {
     val start = ControlSystem(0).pickUp(1, Up).pickUp(2, Up).pickUp(4, Up)
-    val steps = Iterator.iterate(start)(_.proceed).take(15).toIndexedSeq
-    steps(1).elevators(0)  should (beAt(1) and be(stopped) )
-    steps(5).elevators(0)  should (beAt(2) and be(stopped) )
-    steps(6).elevators(0)  should (beAt(2) and be(stopped) )
-    steps(9).elevators(0)  should (beAt(3) and be(moving) )
-    steps(10).elevators(0) should (beAt(4) and be(stopped) )
-    steps(14) shouldBe idle
+
+    start.proceed(1).elevators(0)  should (beAt(1) and be(stopped) )
+    start.proceed(5).elevators(0)  should (beAt(2) and be(stopped) )
+    start.proceed(6).elevators(0)  should (beAt(2) and be(stopped) )
+    start.proceed(9).elevators(0)  should (beAt(3) and be(moving) )
+    start.proceed(10).elevators(0) should (beAt(4) and be(stopped) )
+    start.proceed(14) shouldBe idle
+  }
+
+  it should "use 2nd elevator" in {
+    val start = ControlSystem(2,1).pickUp(4,Down).pickUp(5,Up)
+
+    start.proceed(2).elevators(0) should (beAt(4) and be(moving))
+    start.proceed(3).elevators(0) should (beAt(5) and be(stopped))
+    start.proceed(4).elevators(0) should (beAt(5) and be(stopped))
+
+    start.proceed(2).elevators(1) should (beAt(2) and be(moving))
+    start.proceed(3).elevators(1) should (beAt(3) and be(moving))
+    start.proceed(4).elevators(1) should (beAt(4) and be(stopped))
+    start.proceed(8) shouldBe idle
   }
 
   it should "keep direction" in {
@@ -51,21 +59,9 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
     at4.proceed(StopDuration+1) shouldBe idle
   }
 
-  it should "use 2nd elevator" in {
-    val start = ControlSystem(2,1).pickUp(4,Down).pickUp(5,Up)
-    start.proceed(2).elevators(0) should (beAt(4) and be(moving))
-    start.proceed(2).elevators(1) should (beAt(2) and be(moving))
-    start.proceed(3).elevators(0) should (beAt(5) and be(stopped))
-    start.proceed(3).elevators(1) should (beAt(3) and be(moving))
-    start.proceed(4).elevators(0) should (beAt(5) and be(stopped))
-    start.proceed(4).elevators(1) should (beAt(4) and be(stopped))
-    start.proceed(8) shouldBe idle
-  }
-
-
-  implicit class RideHelper(cs:ControlSystem[Elevator]) {
-    def ride(from: Int, to: Int): ControlSystem[Elevator] = {
-      val i = cs.elevators.indexWhere(e => e.floor == from && e.isStopped && e.dir * (to - from) >= 0)
+  implicit class PassengerBehavior(cs:ControlSystem[Elevator]) {
+    def ride(from: Int, to: Int): ControlSystem[Elevator] = { // board and request drop-off
+      val i = cs.elevators.indexWhere (e => e.floor == from && e.isStopped && e.dir * (to - from) >= 0)
       if (i >= 0) cs.dropOff(i, to) else cs
     }
   }
@@ -74,10 +70,12 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
     val start = ControlSystem(100,0).pickUp(125,Down).pickUp(126, Up).pickUp(81,Down)
                                     .pickUp(-2,Down).pickUp(12,Up).pickUp(8,Up)
     val steps = Iterator.iterate(start) { cs =>
-      cs.ride(126, 130).ride(125, 80).ride(81, 75).ride(12, 10).ride(8, 20).ride(-2, -3).proceed
+      cs.ride(126, 130).ride(125, 80).ride(81, 75)
+        .ride(12, 10).ride(8, 20).ride(-2, -3)
+        .proceed
     }.take(200).toIndexedSeq
-    steps.last shouldBe idle
 
+    steps.last shouldBe idle
     val upperStops = steps.filter(_.elevators(0).isStopped).map(_.elevators(0).floor).distinct
     val lowerStops = steps.filter(_.elevators(1).isStopped).map(_.elevators(1).floor).distinct
     upperStops should equal (IndexedSeq(100,126,130,125,81,80,75))
