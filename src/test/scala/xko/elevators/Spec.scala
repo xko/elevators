@@ -13,7 +13,7 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
   def beAt(floor: Int) =
     Matcher[Elevator](e => MatchResult(e.floor == floor, s"was at ${e.floor}", s"was at ${e.floor}"))
 
-  val idle = BePropertyMatcher[ControlSystem[_]] (cs => BePropertyMatchResult(cs.isIdle, "idle"))
+  val idle = BePropertyMatcher[ControlSystem] (cs => BePropertyMatchResult(cs.isIdle, "idle"))
 
 
   it should "simply pickup" in {
@@ -59,13 +59,13 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
     at4.proceed(StopDuration+1) shouldBe idle
   }
 
-  implicit class PassengerBehavior(cs:ControlSystem[Elevator]) {
-    def ride(from: Int, to: Int): ControlSystem[Elevator] = { // board and request drop-off
+  implicit class PassengerBehavior(cs:ControlSystem) {
+    def ride(from: Int, to: Int): ControlSystem = { // board and request drop-off
       val i = cs.elevators.indexWhere (e => e.floor == from && e.isStopped && e.dir * (to - from) >= 0)
       if (i >= 0) cs.dropOff(i, to) else cs
     }
 
-    def hijack(from: Int, to: Int): ControlSystem[Elevator] = {              // same, but ignore direction:
+    def hijack(from: Int, to: Int): ControlSystem = {              // same, but ignore direction:
       val i = cs.elevators.indexWhere(e => e.floor == from && e.isStopped)   // request up in the downward lift too
       if (i >= 0) cs.dropOff(i, to) else cs
     }

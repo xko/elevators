@@ -2,12 +2,12 @@ package xko.elevators
 
 case class PickUp(floor: Int, dir: Int)
 
-case class Scheduler(lifts: IndexedSeq[Lift], pickups: Set[PickUp], now: Long) extends ControlSystem[Lift] {
+case class Scheduler(lifts: IndexedSeq[Lift], pickups: Set[PickUp], now: Long) extends ControlSystem {
 
-  override def dropOff(elevatorIndex: Int, floor: Int): ControlSystem[Lift] =
+  override def dropOff(elevatorIndex: Int, floor: Int): ControlSystem =
     copy(lifts = (lifts.take(elevatorIndex) :+ lifts(elevatorIndex).requestDrop(floor)) ++ lifts.drop(elevatorIndex+1))
 
-  override def pickUp(floor: Int, dir: Int): ControlSystem[Lift] = copy(pickups = pickups + PickUp(floor, dir))
+  override def pickUp(floor: Int, dir: Int): ControlSystem = copy(pickups = pickups + PickUp(floor, dir))
 
   override def elevators: IndexedSeq[Lift] = lifts
 
