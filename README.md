@@ -4,23 +4,28 @@ Simulation of an elevator control system for a [job interview coding challenge](
 
 ### Algorithm
 
-The algorithm aims to optimise an average time needed to fulfil a request, where request is a call button,
-pushed on the floor, or destination button, pushed inside an elevator. The system has no inputs about actual passenger 
-flow, and has no optimisations in that regard.
+The algorithm aims to optimise an **average time needed to fulfil a request**. Where request is:
+a call button, pushed on the floor (pick-ups), or destination button, 
+pushed inside an elevator (drop-offs). The system has no inputs about actual passenger 
+flow, so there are no optimisations in that regard.
 
-Algorithm can be roughly described like this:
-* Elevator travels in the same direction while it has requests in that direction, 
-  then it switches direction to the opposite
-* If no more requests, elevator goes idle
-* If an idle elevator gets requests, it goes in the direction of the farthest one 
-* Requests to particular elevator are: 
-    * it's drop-off requests
-    * pick-up requests, for which this elevator is the closest
-        * "closest" means minimum [ETA](src/main/scala/xko/elevators/Lift.scala#L67) to particular floor
-        * this can change on every step, so these get reassigned on every step
-* Elevator stops at the floor if it has drop-off requests there, or there are pick-up requests from this floor in its current 
-  direction
-* When stopped, it can resume only after 3 steps 
+Roughly, the algorithm is:
+* Elevator travels in the same direction while its queue contains requests in that direction
+* Then, if there are requests in opposite direction, it goes there
+* If the queue is empty, elevator goes idle
+    * An idle elevator has no direction ('.dir' returns 0)
+    * it can still accept both pick-ups and drop-offs (i.e. doors are open)
+* If an idle elevator gets request, it starts traveling in its direction
+    * If there are several, the direction of the farthest one is chosen
+* Requests queue of particular elevator consists of: 
+    * it's drop-offs
+    * pick-ups, for which, of all the elevators, this one is the closest
+        * "closest" by [ETA](src/main/scala/xko/elevators/Lift.scala#L48), considering requests already 
+          in the queue and current direction 
+        * ETA can change anytime, so pick-ups get reassigned on every step
+* Elevator stops at the floor to fulfil drop-offs there and pick-ups from there in the current direction 
+  (regardless of the queue)
+    * When stopped, it can resume only after 3 steps 
 
 ### Implementation
 
@@ -30,8 +35,10 @@ Implementation of the `Elevator` is `Lift` trait and its implementations for dif
 the same [file](/src/main/scala/xko/elevators/Lift.scala). The `ControlSystem` is implemented by `Scheduler`
 
 Other difference from proposed API, is immutable "functional" style. I.e. the request methods - `pickUp` and 
-`dropOff` - as well as `proceed` (which advanced to the next step), all return 
+`dropOff` - as well as `proceed` (which advances to the next step), all return 
 a new copy of an object and no mutable state is stored anywhere. 
+
+The tests are located in [Spec.scala](/src/test/scala/xko/elevators/Spec.scala)
 
 ### Running and building
 
