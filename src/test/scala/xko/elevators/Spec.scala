@@ -5,6 +5,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.{BeMatcher, BePropertyMatchResult, BePropertyMatcher, MatchResult, Matcher}
 import org.scalatest.matchers.should.Matchers
 
+import scala.util.Random
+
 class Spec extends AnyFlatSpec with Matchers with Inside{
 
   val stopped = BeMatcher[Elevator](e => MatchResult(e.isStopped,"was moving", "was stopped"))
@@ -65,8 +67,8 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
       if (i >= 0) cs.dropOff(i, to) else cs
     }
 
-    def hijack(from: Int, to: Int): ControlSystem = { // same, but ignore direction
-      val i = cs.elevators.indexWhere(e => e.floor == from && e.isStopped)
+    def hijack(from: Int, to: Int): ControlSystem = {                        // same, but ignore direction:
+      val i = cs.elevators.indexWhere(e => e.floor == from && e.isStopped)   // request up in the downward lift too
       if (i >= 0) cs.dropOff(i, to) else cs
     }
   }
@@ -96,5 +98,24 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
     }.take(200).toIndexedSeq
     val upperStops = steps.filter(_.elevators(0).isStopped).map(_.elevators(0).floor).distinct
     upperStops should equal (IndexedSeq(100,126,130,125,122,81,80,75))
+  }
+
+  it should "handle heavy random load" in {
+    val load = 3000
+    val noElevators = 10
+    val noFloors = 1000
+    val rides = Seq.fill(load) {
+      (Random.between(0, noFloors / 2) * 2, Random.between(0, noFloors / 2) * 2 + 1)
+    }
+    val startFloors = Seq.fill(noElevators)(Random.between(0, 100))
+    val preStart = ControlSystem(startFloors: _*)
+    val start = rides.foldLeft(preStart)((cs, r) => cs.pickUp(r._1, math.signum(r._2 - r._1)))
+    val steps = start.iterate { cs =>
+      rides.foldLeft(cs)( (cs, r) => cs.ride(r._1, r._2) ).proceed
+    }.takeWhile(!_.isIdle).toIndexedSeq
+    val stops = steps.flatMap(_.elevators.withFilter(_.isStopped).map(_.floor)).toSet
+    val expectedStops = rides.flatMap(t=>Seq(t._1, t._2)).toSet ++ startFloors
+
+    stops should contain theSameElementsAs expectedStops
   }
 }
