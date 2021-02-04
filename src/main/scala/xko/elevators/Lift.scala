@@ -18,11 +18,14 @@ case class Idle(floor: Int) extends Lift {
   override def dir: Int = 0
   override def isStopped: Boolean = true
 
-  override def requestDrop(floor: Int): Lift = Stopped(floor, this.floor.towards(floor) + floor, Set.empty, 0)
+  override def requestDrop(floor: Int): Lift = Stopped(floor, this.floor.emptyTowards(floor) + floor, Set.empty, 0)
 
-  override def requestPicks(pickups: Iterable[PickUp]): Lift =
-    if (pickups.isEmpty) this
-    else Stopped(floor, this.floor.towards(pickups.maxBy(eta).floor), pickups.toSet, 0)
+  override def requestPicks(pickups: Iterable[PickUp]): Lift = {
+    val (below,above) = pickups.filterNot(_.floor == this.floor).partition(_.floor < this.floor)
+    if(below.isEmpty && above.isEmpty) this
+    else if(below.size > above.size) Stopped(floor, floor.emptyTowards(floor-1), pickups.toSet, 0)
+    else Stopped(floor, floor.emptyTowards(floor+1), pickups.toSet, 0)
+  }
 
   override def willPickNow(pup: PickUp): Boolean = pup.floor == this.floor
   override def eta(pup: PickUp): Long = abs(pup.floor - floor)

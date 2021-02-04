@@ -16,7 +16,7 @@ Roughly, the algorithm is:
     * An idle elevator has no direction ('.dir' returns 0)
     * it can still accept both pick-ups and drop-offs (i.e. doors are open)
 * If an idle elevator gets request, it starts traveling in its direction
-    * If there are several, the direction of the farthest one is chosen
+    * If there are several, the direction, where more requests are is chosen
 * Requests queue of particular elevator consists of: 
     * it's drop-offs
     * pick-ups, for which, of all the elevators, this one is the closest
