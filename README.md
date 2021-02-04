@@ -10,48 +10,49 @@ pushed inside an elevator (drop-offs). The system has no inputs about actual pas
 flow, so there are no optimisations in that regard.
 
 Roughly, the algorithm is:
-* Elevator travels in the same direction while its queue contains requests in that direction
-* Then, if there are requests in opposite direction, it goes there
-* If the queue is empty, elevator goes idle
-    * An idle elevator has no direction ('.dir' returns 0)
-    * it can still accept both pick-ups and drop-offs (i.e. doors are open)
-* If an idle elevator gets request, it starts traveling in its direction
-    * If there are several, the direction, where more requests are is chosen
-* Requests queue of particular elevator consists of: 
-    * it's drop-offs
-    * pick-ups, for which, of all the elevators, this one is the closest
-        * "closest" by [ETA](src/main/scala/xko/elevators/Lift.scala#L48), calculated considering requests already 
-          in the queue and current direction 
-        * ETA can change anytime, so pick-ups get reassigned on every step
-* Elevator stops at the floor to fulfil drop-offs there and pick-ups from there *in the current direction* 
-  (regardless of the queue)
-    * When stopped, it can resume only after 3 steps 
+* On each step, the system iterates active pick-ups and assigns each to the *closest by ETA* elevator
+    *  [ETA](src/main/scala/xko/elevators/Lift.scala#L51) is estimated number of steps to reach pick-up floor,
+       considering the below details
+* Particular elevators queue consists of its drops-off and the above pick-ups
+    * drop-offs are kept in the queue until fulfilled, pick-ups - cleaned and reassigned anew each step
+* Elevator keeps moving in the same direction while its queue contains requests in that direction
+* Then, if there are requests in opposite direction, the direction is switched
+* Elevator stops if:
+    * it has drop-offs at current floor
+    * system has pick-ups at current floor *in current direction* 
+    * When stopped, it can resume after 3 steps
+* Elevator with empty queue is idle and has no preferred direction
+    * the new direction is chosen by the 1st request assigned 
+        * if several assigned in one step - by majority of them
+    
     
 #### Motivation (Vs. First-Come-First-Served)
 
-Disclaimer: Although presented mathematically, the below is in no way a strict proof :)    
+To explain, why this algorithm is (close to) optimal, let's consider distance in floors an elevator has to travel 
+to fulfil certain request `R`. It depends on the floors `Q(...)` it has to visit before `R`, and can be expressed 
+as a sum of the distances between consecutive floors, sth like (in pseudo-scala): 
+`D = Q.sliding(2)( (prev,next)=>abs(next-prev) ).sum`. By moving elevators in the same direction as long as possible, 
+serving requests *on the way*, we essentially order `Q` monotonously, thus minimizing every item of the sum. 
 
-When the system receives request R, it has a queue Q of the requests to be served before R. Assume 
-waiting time *Wt(R) = sum(D(q(i),q(i-1)))*, where *D* is distance in floors between consecutive requests in the queue. 
-As FCFS orders the queue only by time, D can be arbitrary large, i.e. an elevator would cover up to the entire building 
-height between each pair. By moving elevators in the same direction as long as possible, serving requests *on the way*, 
-this system essentially orders *Q* monotonously by floor number, thus minimizing every *D* in the sum.
+FCFS would order it only by time, making every item of the sum arbitrary large, i.e. an elevator would cover up to the entire
+building height between each pair. 
 
 ### Implementation
 
-The public API is in [package object](/src/main/scala/xko/elevators/package.scala) of `relayr.elevators` 
-it follows the [challenge](Challenge.pdf) proposal, except the elevator status is a separate `Elevator` class.  
-Implementation of the `Elevator` is `Lift` trait and its implementations for different states - all placed in 
-the same [file](/src/main/scala/xko/elevators/Lift.scala). The `ControlSystem` is implemented by `Scheduler`
+The public API is in [package object](/src/main/scala/xko/elevators/package.scala) of `xko.elevators` 
+it follows the [challenge](Challenge.pdf) proposal, except the elevator status is a separate `Elevator` class. 
+All the API instances are immutable: the request methods - `pickUp` and `dropOff` - 
+as well as `proceed` (advances to the next step), all return a new copy of `ControlSystem`, 
+which should be used for further requests and advancing to the next step.
 
-Other difference from proposed API, is immutable "functional" style. I.e. the request methods - `pickUp` and 
-`dropOff` - as well as `proceed` (which advances to the next step), all return 
-a new copy of an object and no mutable state is stored anywhere. 
+`Elevator` is implemented by `Lift` trait and its further implementations for different states - all placed in 
+the same [file](/src/main/scala/xko/elevators/Lift.scala). The `ControlSystem` is implemented by 
+[`Scheduler`](/src/main/scala/xko/elevators/Scheduler.scala)
 
 ### Building and testing
 
 The project is [sbt](https://www.scala-sbt.org)-based. All sbt commands are available via included [starter
-script](bin/sbt). E.g. `./bin/sbt test` 
+script](bin/sbt). E.g. `./bin/sbt test`. 
 
-The tests are located in [Spec.scala](/src/test/scala/relayr/elevators/Spec.scala), can be run with `sbt test`
+The tests are located in [Spec.scala](/src/test/scala/xko/elevators/Spec.scala)
 
