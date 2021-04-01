@@ -42,7 +42,7 @@ trait Active extends Lift {
 
   def canPickNow(pup: PickUp): Boolean = pup.floor == floor && (pup.dir == dir || planAhead.isEmpty)
 
-  lazy val planAhead: SortedSet[Int] = (dropoffs ++ pickups.map(_.floor)).rangeFrom(floor+1)
+  lazy val planAhead: SortedSet[Int] = (dropoffs ++ pickups.map(_.floor)).rangeFrom(floor+dir)
   lazy val farthestAhead: Int = planAhead.lastOption.getOrElse(floor)
   lazy val stopsAhead: SortedSet[Int] = (dropoffs ++ pickups.filter(_.dir == dir).map(_.floor)).rangeFrom(floor+1)
 
