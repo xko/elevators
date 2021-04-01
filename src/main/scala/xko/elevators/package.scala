@@ -60,7 +60,7 @@ package object elevators {
 
   private[elevators] implicit class IntUtil(v: Int) {
     def between(a: Int, b: Int): Boolean =  math.min(a, b) to math.max(a, b) contains v
-    def emptyTowards(t: Int): SortedSet[Int] = if(t >= v) SortedSet.empty else reverse(SortedSet.empty)
+    def dirSet(towards: Int): SortedSet[Int] = if(towards >= v) SortedSet.empty else reverse(SortedSet.empty)
   }
 
 
