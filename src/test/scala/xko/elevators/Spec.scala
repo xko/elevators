@@ -24,6 +24,12 @@ class Spec extends AnyFlatSpec with Matchers with Inside{
     after.elevators(0) should (beAt(4) and be(stopped))
   }
 
+  it should "pick up opposite direction" in {
+    val before = ControlSystem(3,3,3)
+    val after = before.pickUp(0,1).proceed(3)
+    after.elevators(0) should (beAt(0) and be(stopped))
+  }
+
   it should "collect way up" in {
     val start = ControlSystem(0).pickUp(1, Up).pickUp(2, Up).pickUp(4, Up)
 
