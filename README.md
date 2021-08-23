@@ -13,8 +13,8 @@ Roughly, the algorithm is:
 * On each step, the system iterates active pick-ups and assigns each to the *closest by ETA* elevator
     *  [ETA](src/main/scala/xko/elevators/Lift.scala#L51) is estimated number of steps to reach pick-up floor,
        considering the below details
-* Particular elevators queue consists of its drops-off and the above pick-ups
-    * drop-offs are kept in the queue until fulfilled, pick-ups - cleaned and reassigned anew each step
+* Particular elevators queue consists of its drops-off and the active pick-ups
+    * drop-offs are kept in the queue until fulfilled, pick-ups are cleaned and reassigned anew each step
 * Elevator keeps moving in the same direction while its queue contains requests in that direction
 * Then, if there are requests in opposite direction, the direction is switched
 * Elevator stops if:
